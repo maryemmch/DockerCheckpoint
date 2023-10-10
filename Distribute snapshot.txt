@@ -1,0 +1,42 @@
+echo "INSERT INTO snapshots (filename)VALUES('$1');" >> /home/filecql.cql
+echo "SELECT * FROM snapshots;" >> /home/filecql.cql
+
+sleep 2
+cqlsh -f /home/filecql.cql
+
+sleep 2
+
+nodetool getendpoints distributedsnapshots snapshots "$1" >  /home/testreplicate"$3".txt
+
+ nb_replicates=`wc -l "/home/testreplicate$3.txt" | cut -d " " -f1`
+
+ for ip in $(seq $nb_replicates)
+ do
+    ipaddr=`head "/home/testreplicate$3.txt" -n $ip | tail -1`
+    echo $ipaddr
+
+    hostname=$(host $ipaddr | awk '{print substr($NF,1,length($NF)-1)}')
+
+    echo $hostname
+    var=$(hostname -f)
+    echo $var
+    if [ "$hostname" != "$var" ]
+    then
+    echo "[Different hostnames:]:rsync.."
+
+rsync -ratlz --rsh=" -o StrictHostKeyChecking=no" -aAXHltzh --progress --numeric-ids --devices --rsync-path="rsync" $1 $hostname:$1
+rsync -ratlz --rsh="/usr/bin/sshpass -p /home/ubuntu/key.pem ssh -o StrictHostKeyChecking=no -l ubuntu"1
+rsync -rave "ssh -i PEMKEYFILE.pem" /path/to/local/files/* ec2-user@EC2_INSTANCE_HOSTNAME:/path/to/remote/files
+
+    name=$2
+    LXCPATH=$(lxc-config lxc.lxcpath)
+    rsync -ratlz --rsh="/usr/bin/sshpass ssh -o StrictHostKeyChecking=no" -aAXHltzh --progress --numeric-ids --devices --rsync-path="rsync" $LXCPATH/$name/ $hostname:/tmp/$name/
+
+    fi
+
+ done
+/var/lib/docker/containers/44cb5358f885379345777e8988cd9e8b4d0be914ba037249ff4ddb763b434a44/checkpoints
+docker export /var/lib/docker/containers/44cb5358f885379345777e8988cd9e8b4d0be914ba037249ff4ddb763b434a44 > containerpython.tar
+echo "do it"
+rsync -rave "ssh -i key.pem" /var/lib/docker/containers/44cb5358f885379345777e8988cd9e8b4d0be914ba037249ff4ddb763b434a44/containerpython.tar
+

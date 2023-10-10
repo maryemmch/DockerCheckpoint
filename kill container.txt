@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  echo " ./inject.sh hostlistworkers.txt"
+  exit 1
+fi
+
+remote_machines=$(cat "$1")
+containers=()
+for machine in $remote_machines
+do
+  container_list=$(ssh -i "key.pem" -o "StrictHostKeyChecking=no" ubuntu@$machine ' sudo docker container ls -a --format="{{.ID}}" ')
+  for id  in $container_list
+  do
+  containers+=("$machine $id")
+  echo "$machine $id"
+  done
+
+done
+num_containers=${#containers[@]}
+percent=25
+limit=$((num_containers * percent/ 100))
+echo "kill $limit random..."
+for i in $(seq 1 $limit)
+do
+
+container=${containers[$RANDOM % $limit]}
+machine=$(echo $container | awk '{print $1}')
+container_id=$(echo $container | awk '{print $2}')
+echo "Killing container $container_id on machine $machine"
+done
+
+
+

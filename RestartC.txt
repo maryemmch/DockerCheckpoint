@@ -1,0 +1,45 @@
+#! /bin/sh
+if [ $# -ne 2 ]
+then
+ echo "USE: ./RestoreFailedWorkers.sh StateNodes.txt DetailsWorkers.txt "
+  exit 1
+fi
+nodetool status > StateNodes.txt
+tr -d '\r' < DetailsWorkers.txt > newfile
+rm DetailsWorkers.txt
+mv newfile DetailsWorkers.txt
+sleep 5
+#Extract failed nodes from StateNodes.txt
+file=$1
+echo $file
+
+#ip=$(grep -e DN $1 | awk '{ print $2; }')
+iparr=($(awk '/^DN/ {print $2}' $file))
+
+for ip in ${iparr[@]}
+do
+#ip=${iparr[0]}
+echo "[ip failed worker]"
+echo $ip
+echo "*****************"
+ID=$(sed -n "/Containers running on $ip:/,/Containers running on/{//!p;}" "/home/ubuntu/container_list.txt")
+echo "container id was in this machine"
+echo "$ID"
+echo "*****************"
+echo "$ID" | while read -r id
+do
+nodetool getendpoints distributedsnapshots snapshots "$id" >  /home/ubuntu/script/DetailsWorkers.txt
+
+ nb_replicates=`wc -l "/home/ubuntu/script/DetailsWorkers.txt" | cut -d " " -f1`
+
+ for ip in $(seq 2)
+ do
+    ipaddr=`head "/home/ubuntu/script/DetailsWorkers.txt" -n $ip | tail -1`
+
+echo " $ipaddr have $id"
+done
+done
+done
+*********
+ssh -i "key.pem" ubuntu@172.31.22.239 ' sudo docker start --checkpoint 2f770ae6e135 2f770ae6e135'
+
